@@ -1,39 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with Ollama</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #chat-container { max-width: 600px; margin: auto; }
-        textarea { width: 100%; height: 100px; }
-        button { padding: 10px; margin-top: 10px; }
-        #response { margin-top: 20px; font-weight: bold; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            word-wrap: break-word;
+        }
+
+        .user {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        .bot {
+            background-color: #e0e0e0;
+            align-self: flex-start;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background: #ffffff;
+            border-top: 1px solid #ddd;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin-left: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
+
 <body>
+
+    <h2>Chat with Ollama</h2>
     <div id="chat-container">
-        <h2>Chat with Ollama</h2>
-        <textarea id="userInput" placeholder="Type your message..."></textarea>
-        <br>
-        <button onclick="sendMessage()">Send</button>
-        <div id="response"></div>
+        <div id="chat-box"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type your message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
     </div>
+
     <script>
-        function sendMessage() {
-            const userMessage = document.getElementById("userInput").value;
-            fetch("http://localhost:5000/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: userMessage })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("response").innerText = "Response: " + data.response;
-            })
-            .catch(error => console.error("Error:", error));
+        async function sendMessage() {
+            let inputField = document.getElementById("user-input");
+            let userMessage = inputField.value.trim();
+            if (userMessage === "") return;
+
+            let chatBox = document.getElementById("chat-box");
+
+            // Append user message
+            chatBox.innerHTML += `<div class="message user"><b>You:</b> ${userMessage}</div>`;
+            inputField.value = "";
+
+            try {
+                let response = await fetch("http://localhost:5000/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userMessage })
+                });
+
+                let data = await response.json();
+                
+                // Append bot response
+                chatBox.innerHTML += `<div class="message bot"><b>Bot:</b> ${data.response}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (error) {
+                console.error("Error sending message:", error);
+            }
         }
+
+        async function loadHistory() {
+            let chatBox = document.getElementById("chat-box");
+
+            try {
+                let response = await fetch("http://localhost:5000/history");
+                let history = await response.json();
+
+                history.forEach(chat => {
+                    chatBox.innerHTML += `<div class="message user"><b>You:</b> ${chat.question}</div>`;
+                    chatBox.innerHTML += `<div class="message bot"><b>Bot:</b> ${chat.response}</div>`;
+                });
+            } catch (error) {
+                console.error("Error loading history:", error);
+            }
+        }
+
+        window.onload = loadHistory;
     </script>
+
 </body>
+
 </html>
