@@ -6,155 +6,211 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with Ollama</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
             font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
-            background-color: #f4f4f4;
         }
 
-        h2 {
-            margin-bottom: 10px;
-            font-size: 24px;
-            color: #333;
-        }
-
-        #chat-container {
-            width: 100%;
-            max-width: 800px;
-            height: 80vh;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #chat-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message {
-            max-width: 70%;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
-            word-wrap: break-word;
-        }
-
-        .user {
-            background-color: #007bff;
+        #sidebar {
+            width: 20%;
+            background: #333;
             color: white;
-            align-self: flex-end;
-            text-align: right;
-        }
-
-        .bot {
-            background-color: #e0e0e0;
-            align-self: flex-start;
-        }
-
-        #input-container {
-            display: flex;
             padding: 10px;
-            background: #ffffff;
-            border-top: 1px solid #ddd;
+            overflow-y: auto;
         }
 
-        input {
-            flex: 1;
+        #newChatBtn {
+            width: 100%;
             padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button {
-            padding: 10px 15px;
-            margin-left: 10px;
-            background: #007bff;
+            background: blue;
             color: white;
             border: none;
-            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        #chatList {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #chatList li {
+            padding: 10px;
+            background: #444;
+            margin-bottom: 5px;
             cursor: pointer;
         }
 
-        button:hover {
-            background: #0056b3;
+        #chatContainer {
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        #chatMessages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .user-message {
+            background: #007bff;
+            color: white;
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            text-align: right;
+        }
+
+        .bot-message {
+            background: #ddd;
+            color: black;
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        #inputContainer {
+            display: flex;
+        }
+
+        #userInput {
+            flex-grow: 1;
+            padding: 10px;
+        }
+
+        #sendBtn {
+            padding: 10px;
+            background: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
     </style>
 </head>
 
 <body>
 
-    <h2>Chat with Ollama</h2>
-    <div id="chat-container">
-        <div id="chat-box"></div>
-        <div id="input-container">
-            <input type="text" id="user-input" placeholder="Type your message..." />
-            <button onclick="sendMessage()">Send</button>
+    <div id="sidebar">
+        <button id="newChatBtn">New Chat</button>
+        <ul id="chatList"></ul>
+    </div>
+
+    <div id="chatContainer">
+        <div id="chatMessages"></div>
+        <div id="inputContainer">
+            <input type="text" id="userInput" placeholder="Type your message...">
+            <button id="sendBtn">Send</button>
         </div>
     </div>
 
     <script>
-        async function sendMessage() {
-            let inputField = document.getElementById("user-input");
-            let userMessage = inputField.value.trim();
-            if (userMessage === "") return;
+        let chatId = null;
 
-            let chatBox = document.getElementById("chat-box");
-
-            // Append user message
-            chatBox.innerHTML += `<div class="message user"><b>You:</b> ${userMessage}</div>`;
-            inputField.value = "";
-
+        async function startNewChat() {
             try {
-                let response = await fetch("http://localhost:5000/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: userMessage })
-                });
-
-                let data = await response.json();
-                
-                // Append bot response
-                chatBox.innerHTML += `<div class="message bot"><b>Bot:</b> ${data.response}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
+                const response = await fetch("http://127.0.0.1:5000/new_chat", { method: "POST" });
+                const data = await response.json();
+                chatId = data.chat_id;
+                console.log("New chat started with ID:", chatId);
             } catch (error) {
-                console.error("Error sending message:", error);
+                console.error("Error creating new chat:", error);
             }
         }
 
-        async function loadHistory() {
-            let chatBox = document.getElementById("chat-box");
-
+        async function loadChats() {
             try {
-                let response = await fetch("http://localhost:5000/history");
-                let history = await response.json();
+                const response = await fetch("http://127.0.0.1:5000/chats");
+                const chats = await response.json();
+                const chatList = document.getElementById("chatList");
+                chatList.innerHTML = "";
 
-                history.forEach(chat => {
-                    chatBox.innerHTML += `<div class="message user"><b>You:</b> ${chat.question}</div>`;
-                    chatBox.innerHTML += `<div class="message bot"><b>Bot:</b> ${chat.response}</div>`;
+                chats.forEach(chat => {
+                    const listItem = document.createElement("li");
+                    listItem.textContent = chat.title || "Untitled Chat";
+                    listItem.dataset.chatId = chat.chat_id;
+
+                    listItem.addEventListener("click", () => loadChatHistory(chat.chat_id));
+                    chatList.appendChild(listItem);
                 });
             } catch (error) {
-                console.error("Error loading history:", error);
+                console.error("Error loading chats:", error);
             }
         }
 
-        window.onload = loadHistory;
+        async function loadChatHistory(selectedChatId) {
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/history/${selectedChatId}`);
+                const chatHistory = await response.json();
+                const chatContainer = document.getElementById("chatMessages");
+                chatContainer.innerHTML = "";
+
+                chatHistory.forEach(({ question, response }) => {
+                    const userMessage = document.createElement("div");
+                    userMessage.innerHTML = `<strong>You:</strong> ${question}`;
+                    userMessage.classList.add("user-message");
+                    chatContainer.appendChild(userMessage);
+
+                    const botMessage = document.createElement("div");
+                    botMessage.innerHTML = `<strong>Bot:</strong> ${response}`;
+                    botMessage.classList.add("bot-message");
+                    chatContainer.appendChild(botMessage);
+                });
+
+                chatId = selectedChatId;
+            } catch (error) {
+                console.error("Error loading chat history:", error);
+            }
+        }
+
+        document.getElementById("sendBtn").addEventListener("click", async function () {
+            const userInput = document.getElementById("userInput").value.trim();
+            if (userInput === "") return;
+
+            if (!chatId) {
+                await startNewChat();
+            }
+
+            const chatContainer = document.getElementById("chatMessages");
+
+            const userMessage = document.createElement("div");
+            userMessage.innerHTML = `<strong>You:</strong> ${userInput}`;
+            userMessage.classList.add("user-message");
+            chatContainer.appendChild(userMessage);
+
+            fetch("http://127.0.0.1:5000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userInput, chat_id: chatId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const botResponse = data.response || "Error: No response";
+                    const botMessage = document.createElement("div");
+                    botMessage.innerHTML = `<strong>Bot:</strong> ${botResponse}`;
+                    botMessage.classList.add("bot-message");
+                    chatContainer.appendChild(botMessage);
+                })
+                .catch(error => console.error("Error sending message:", error));
+
+            document.getElementById("userInput").value = "";
+        });
+
+        document.getElementById("newChatBtn").addEventListener("click", function () {
+            const chatContainer = document.getElementById("chatMessages");
+
+            if (chatContainer.innerHTML.trim() !== "") {
+                startNewChat();
+                chatContainer.innerHTML = "";
+            }
+        });
+
+        loadChats();
     </script>
 
 </body>
