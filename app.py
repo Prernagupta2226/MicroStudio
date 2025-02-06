@@ -5,9 +5,9 @@ from flask_cors import CORS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
 
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)  # Allow frontend requests
 
 # Ollama local API endpoint
@@ -23,7 +23,7 @@ def chat():
     logger.info(f"Received request: {user_input}")
 
     payload = {
-        "model": "llama2",  # Change this if using a different model
+        "model": "mistral",  # Change this if using a different model
         "prompt": user_input,
         "stream": False
     }
@@ -37,6 +37,6 @@ def chat():
         logger.error(f"Error communicating with Ollama: {str(e)}")
         return jsonify({"error": str(e)})
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     logger.info("Starting Flask server on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=True)
