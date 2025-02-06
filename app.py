@@ -6,7 +6,7 @@ from flask_cors import CORS
 import datetime
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -40,14 +40,18 @@ def new_chat():
     chat_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S")  # Unique chat ID based on timestamp
     return jsonify({"chat_id": chat_id})
 
-@app.route('/chat', methods=['POST'])
+@app.route("/chat", methods=["POST"])
 def chat():
-    user_input = request.json.get('message')
-    if not user_input:
-        logger.warning("No input provided in request.")
-        return jsonify({"error": "No input provided"}), 400
+    """Handles user messages and fetches responses."""
+    data = request.json
+    user_input = data.get("message")
+    chat_id = data.get("chat_id")
 
-    logger.info(f"Received request: {user_input}")
+    if not user_input or not chat_id:
+        logger.warning("Missing input or chat ID in request.")
+        return jsonify({"error": "Missing input or chat ID"}), 400
+
+    logger.info(f"Received request: {user_input} (Chat ID: {chat_id})")
 
     payload = {
         "model": "llama2",  # Change this if using a different model
@@ -63,6 +67,7 @@ def chat():
         # Store chat in database
         conn = sqlite3.connect("chat_history.db")
         cursor = conn.cursor()
+
         # If this is the first message, set title
         cursor.execute("SELECT COUNT(*) FROM chats WHERE chat_id = ?", (chat_id,))
         count = cursor.fetchone()[0]
@@ -76,10 +81,11 @@ def chat():
         conn.commit()
         conn.close()
 
+        logger.info(f"Response from Ollama: {bot_response}")
         return jsonify({"response": bot_response})
     except Exception as e:
         logger.error(f"Error communicating with Ollama: {str(e)}")
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/chats", methods=["GET"])
 def get_chats():
@@ -93,7 +99,6 @@ def get_chats():
     chat_list = [{"chat_id": c[0], "title": c[1] if c[1] else "Untitled Chat"} for c in chats]
     return jsonify(chat_list)
 
-
 @app.route("/history/<chat_id>", methods=["GET"])
 def get_chat_history(chat_id):
     """Fetches chat history for a specific session."""
@@ -105,7 +110,7 @@ def get_chat_history(chat_id):
 
     chat_list = [{"question": q, "response": r} for q, r in chats]
     return jsonify(chat_list)
-    
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     logger.info("Starting Flask server on port 5000...")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
