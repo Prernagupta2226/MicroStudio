@@ -4,7 +4,7 @@ import time
 
 app = Flask(__name__)
 
-# Service registry in-memory store
+# Service registry in-memory stores
 services = {}
 HEARTBEAT_TIMEOUT = 300  # 5 minutes
 
