@@ -11,6 +11,14 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)  # Allow frontend requests
+CORS(app)  # Enable CORS for all routes
+
+@app.route('/')
+def home():
+    return "Microservice is running!"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5002)
 
 # Ollama local API endpoint
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
